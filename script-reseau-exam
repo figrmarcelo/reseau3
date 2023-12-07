@@ -1,0 +1,90 @@
+$nomDomaine = (Get-ADDomain).DistinguishedName
+$chemin = "OU=GROUPES,OU=INFORMATIQUE,$nomDomaine"
+$nomDNS = (Get-ADDomain).DnsRoot
+
+$motDePasse = "AAAaaa111"
+$mdp = ConvertTo-SecureString -AsPlainText $MotdePasse -Force
+
+Get-ADGroup -Filter * `
+            -SearchBase $chemin | Remove-ADGroup -Confirm:$false
+
+$FUtilisateur = "E:\PRATIQUE_ETU.csv"
+$ListeUtilisateur = Import-Csv -Path $FUtilisateur `
+                                -Delimiter ";"
+
+Foreach ($Ligne in $ListeUtilisateur)
+{
+  #Creation de 1 user
+  #Ajout des groupes a ce user
+  #donner dossier personnel
+  #donner des droits
+
+  $matricule = $Ligne.Matricule
+  $groupes = getGroupes -matricule $matricule
+  $nom = $Ligne.Nom
+  $prenom = $Ligne.Prenom
+  $code = $Ligne.Code
+
+  
+  New-ADUser -Name $matricule `
+           -SamAccountName $matricule `
+           -UserPrincipalName "$matricule@$nomDNS" `
+           -Path $chemin `
+           -GivenName $prenom `
+           -Surname $nom `
+           -DisplayName "$prenom $nom - $code"  `
+           -Description "Mon nom est $nom et mon prénom est $prenom" `
+           -AccountPassword $mdp `
+           -PasswordNeverExpires $true `
+           -Enabled $true
+
+Add-ADPrincipalGroupMembership -Identity $matricules `
+                                 -MemberOf $groupes
+
+}
+
+
+Function getGroupes {
+    Param(
+        [string]$matricule
+    )
+    $emp = "EMPLOYES,"
+    $gest = "GESTIONNAIRES,"
+    $allGroups = "EMPLOYES_ET_GESTIONNAIRES,"
+   
+    if ($matricule -eq 10000 -or $matricule -eq 20000 -or $matricule -eq 30000 -or $matricule -eq 40000 -or $matricule -eq 50000 -or $matricule -eq 60000) {
+        Return "GESTIONNAIRES"
+
+    } elseif ($matricule -ge 10000 -and $matricule -le 19999) {
+        $allGroups =  "PROGRAMMEURS_PYTHON_EMP"
+
+    } elseif ($matricule -ge 20000 -and $matricule -le 29999) {
+        Return "PROGRAMMEURS_ANDROID_EMP"
+
+    } elseif ($matricule -ge 30000 -and $matricule -le 39999) {
+        Return "TECHNICIENS_DU_RESEAU_EMP"
+
+    } elseif ($matricule -ge 40000 -and $matricule -le 49999) {
+        Return "CONCEPTEURS_WEB_EMP"
+
+    } elseif ($matricule -ge 50000 -and $matricule -le 59999) {
+        Return "TESTEURS_DE_LOGICIELS_PYTHON_EMP"
+
+    } elseif ($matricule -ge 60000 -and $matricule -le 69999) {
+        Return "TESTEURS_DE_LOGICIELS_ANDROID_EMP"
+
+    } else {
+        Return "Code not recognized"
+    }
+}
+
+
+
+# Call the function with a specific matricule value
+#$result = getGroupes -matricule 10000
+
+# Output the result
+#Write-Host $chemin
+
+    
+
