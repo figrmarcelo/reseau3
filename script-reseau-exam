@@ -1,3 +1,5 @@
+Clear-Host
+
 $nomDomaine = (Get-ADDomain).DistinguishedName
 $chemin = "OU=GROUPES,OU=INFORMATIQUE,$nomDomaine"
 $nomDNS = (Get-ADDomain).DnsRoot
@@ -14,19 +16,20 @@ $ListeUtilisateur = Import-Csv -Path $FUtilisateur `
 
 Foreach ($Ligne in $ListeUtilisateur)
 {
-  #Creation de 1 user
-  #Ajout des groupes a ce user
-  #donner dossier personnel
-  #donner des droits
+    #Creation de 1 user
+    #Ajout des groupes a ce user
+    #donner dossier personnel
+    #donner des droits
 
-  $matricule = $Ligne.Matricule
-  $groupes = getGroupes -matricule $matricule
-  $nom = $Ligne.Nom
-  $prenom = $Ligne.Prenom
-  $code = $Ligne.Code
+    $matricule = $Ligne.Matricule
+    $groupes = (getGroups -matricule $matricule) -split(",")
+    $nom = $Ligne.Nom
+    $prenom = $Ligne.Prenom
+    $code = $Ligne.Code
+    $cheminPersonnel = "E:\_S1_PERSO\$matricule"
 
   
-  New-ADUser -Name $matricule `
+    New-ADUser -Name $matricule `
            -SamAccountName $matricule `
            -UserPrincipalName "$matricule@$nomDNS" `
            -Path $chemin `
@@ -38,13 +41,25 @@ Foreach ($Ligne in $ListeUtilisateur)
            -PasswordNeverExpires $true `
            -Enabled $true
 
-Add-ADPrincipalGroupMembership -Identity $matricules `
+    Add-ADPrincipalGroupMembership -Identity $matricules `
                                  -MemberOf $groupes
+
+    New-Item -Path $cheminPersonnel `
+        -ItemType Directory
+
+    icacls.exe $cheminPersonnel /grant $matricule":(OI)(CI)(M)"
+
+    Set-ADUser -Identity $matricule `
+               -HomeDrive "P:" `
+               -HomeDirectory $cheminPersonnel
+
+
+
 
 }
 
 
-Function getGroupes {
+Function getGroups {
     Param(
         [string]$matricule
     )
@@ -52,31 +67,62 @@ Function getGroupes {
     $gest = "GESTIONNAIRES,"
     $allGroups = "EMPLOYES_ET_GESTIONNAIRES,"
    
-    if ($matricule -eq 10000 -or $matricule -eq 20000 -or $matricule -eq 30000 -or $matricule -eq 40000 -or $matricule -eq 50000 -or $matricule -eq 60000) {
-        Return "GESTIONNAIRES"
-
-    } elseif ($matricule -ge 10000 -and $matricule -le 19999) {
-        $allGroups =  "PROGRAMMEURS_PYTHON_EMP"
-
-    } elseif ($matricule -ge 20000 -and $matricule -le 29999) {
-        Return "PROGRAMMEURS_ANDROID_EMP"
-
-    } elseif ($matricule -ge 30000 -and $matricule -le 39999) {
-        Return "TECHNICIENS_DU_RESEAU_EMP"
-
-    } elseif ($matricule -ge 40000 -and $matricule -le 49999) {
-        Return "CONCEPTEURS_WEB_EMP"
-
-    } elseif ($matricule -ge 50000 -and $matricule -le 59999) {
-        Return "TESTEURS_DE_LOGICIELS_PYTHON_EMP"
-
-    } elseif ($matricule -ge 60000 -and $matricule -le 69999) {
-        Return "TESTEURS_DE_LOGICIELS_ANDROID_EMP"
-
-    } else {
-        Return "Code not recognized"
+    if ($matricule -ge 10000 -and $matricule -lt 20000)
+    {
+        if($matricule -eq 10000) {
+            $allGroups = $allGroups + $gest + "GPROGRAMMEURS_PYTHON_GEST"
+        }
+        else {
+            $allGroups = $allGroups + $emp + "PROGRAMMEURS_PYTHON_EMP"
+        }
     }
+    elseif ($matricule -ge 20000 -and $matricule -lt 30000) {
+        if($matricule -eq 20000) {
+            $allGroups = $allGroups + $gest + "PROGRAMMEURS_ANDROID_GEST"
+        }
+        else {
+            $allGroups = $allGroups + $emp + "PROGRAMMEURS_ANDROID_EMP"
+        }
+    }
+    elseif ($matricule -ge 30000 -and $matricule -lt 40000) {
+        if($matricule -eq 30000) {
+            $allGroups = $allGroups + $gest + "TECHNICIENS_DU_RESEAU_GEST"
+        }
+        else {
+            $allGroups = $allGroups + $emp + "TECHNICIENS_DU_RESEAU_EMP"
+        }
+    }
+    elseif ($matricule -ge 40000 -and $matricule -lt 50000) {
+        if($matricule -eq 40000) {
+            $allGroups = $allGroups + $gest + "CONCEPTEURS_WEB_GEST"
+        }
+        else {
+            $allGroups = $allGroups + $emp + "CONCEPTEURS_WEB_EMP"
+        }
+    }
+    elseif ($matricule -ge 50000 -and $matricule -lt 60000) {
+        if($matricule -eq 50000) {
+            $allGroups = $allGroups + $gest + "TESTEURS_DE_LOGICIELS_PYTHON_GEST"
+        }
+        else {
+            $allGroups = $allGroups + $emp + "TESTEURS_DE_LOGICIELS_PYTHON_EMP"
+        }
+    }
+    elseif ($matricule -ge 60000 -and $matricule -lt 70000) {
+        if($matricule -eq 60000) {
+            $allGroups = $allGroups + $gest + "TESTEURS_DE_LOGICIELS_ANDROID_GEST"
+        }
+        else {
+            $allGroups = $allGroups + $emp + "TESTEURS_DE_LOGICIELS_ANDROID_EMP"
+        }
+    }
+    else{
+        throw "matricule invalide"
+    }
+
+    return $allGroups
 }
+
 
 
 
@@ -87,4 +133,3 @@ Function getGroupes {
 #Write-Host $chemin
 
     
-
